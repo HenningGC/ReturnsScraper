@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 def main():
 	url = 'https://seekingalpha.com/etfs-and-funds/etf-tables/sectors'
-	driver = webdriver.Chrome(r'C:\Users\Xxmet\OneDrive\Desktop\Other\chromedriver.exe')
+	driver = webdriver.Chrome('')
 	driver.get(url)
 	driver.minimize_window()
 	etf_sector = driver.find_elements_by_class_name('theme_sub_links')
