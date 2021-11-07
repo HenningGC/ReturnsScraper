@@ -14,7 +14,7 @@ Whereas the more on the lower left part an ETF finds itself in, the more it is l
 
 HOW TO USE:
 
-When starting the program, it will promp the user with the following text: "Select ETF performance data you would like to see the leadership of: ".
+When starting the program, it will prompt the user with the following text: "Select ETF performance data you would like to see the leadership of: ".
 Where the user shall input either the index number (starting from 1, ending at 15) or an acronym.
 Once the program receives an input from the user, it proceeds to look for the corresponding function to use.
 Immediately after the program finds the correct function, the leadership graph will be displayed to the user.
