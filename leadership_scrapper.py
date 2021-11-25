@@ -143,10 +143,10 @@ def visualize_data(df):
 
 	while answer not in ('y','yes','n','no'):
 		answer = str(input("Would you like to analyze leadership of other ETF data?: ")).lower()
-		if answer in ('y','yes'):
-			main()
-		elif answer in ('n','no'):
-			exit()
+	if answer in ('y','yes'):
+		main()
+	elif answer in ('n','no'):
+		exit()
 
 
 
