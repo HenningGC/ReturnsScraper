@@ -67,7 +67,8 @@ def main():
 		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/themes_and_subsectors',driver))
 	
 	else:
-		print("Invalid input, try again later")
+		print("Invalid input, try again")
+		main()
 
 
 def data_select(data):
