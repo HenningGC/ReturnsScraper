@@ -1,154 +1,158 @@
-import time
+import pandas as pd
+import numpy as np
+from datetime import datetime
+import yfinance as yf
+import math
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
+from matplotlib.patches import Polygon
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
-import lxml
-from lxml import etree
-from lxml import html
 from urllib.request import urlopen, Request
-from selenium import webdriver
-from selenium import *
-from selenium.webdriver.common.keys import Keys
-import matplotlib.pyplot as plt
+import time
+import numpy as np
+from scipy import stats
+import pandas_ta as ta
 
 
-def main():
-	url = 'https://seekingalpha.com/etfs-and-funds/etf-tables/sectors'
-	driver = webdriver.Chrome('')
-	driver.get(url)
-	driver.minimize_window()
-	etf_sector = driver.find_elements_by_class_name('theme_sub_links')
-	print(etf_sector[0].text)
-	answer = str(input("Select ETF performance data you would like to see the leadership of: ")).lower().replace(" ","")
-	
-	if answer in ('1', 'keymarketetfs','key'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/key_markets',driver))
 
-	elif answer in ('2', 'bondetfs','bond'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/bonds',driver))
+def get_symbols(url):
 
-	elif answer in ('3', 'commodityetfs','commodity'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/commodities',driver))
+	response = requests.get(url)
+	doc = BeautifulSoup(response.text, 'html.parser')
+	tableETFs = doc.find_all('td',{'class':'eft_or_etn'})
+	symbols = []
 
-	elif answer in ('4','countryetfs','country'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/countries',driver))
+	for elem in tableETFs:
+		symbols.append(elem.text.split(' ')[-1])
 
-	elif answer in ('5','currencyetfs','currency'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/currencies',driver))
+	return symbols
 
-	elif answer in ('6', 'dividendetfs','dividend'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/dividends',driver))
+def scrape_data(symbols):
+	AllData = pd.DataFrame()
+	for ticker in symbols:
+		req = Request(url='https://finviz.com/quote.ashx?t={}'.format(ticker),headers={'user-agent':'my-app'})
+		try:
+			response = urlopen(req)
+		except:
+			continue
 
-	elif answer in ('7','emergingmarketsetfs','emerging'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/emerging_markets',driver))
+		print(ticker)
+		html = BeautifulSoup(response, 'html')
+		info_table = html.find_all(class_= "snapshot-table2")
+	    
+		info_tables = dict()
+		info_tables[ticker] = info_table
 
-	elif answer in ('8', 'globalregionaletfs','globalregional'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/global_and_regions',driver))
+		ticker_data = info_tables[ticker]
 
-	elif answer in ('9', 'growthvsvalueetfs','growthvalue'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/growth_vs_value',driver))
+		ticker_rows = [result.findAll('tr') for result in ticker_data]
+		ticker_rows_content = [result.findAll('b') for result in ticker_data]
 
-	elif answer in ('10', 'marketcapetfs','marketcap'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/market_cap',driver))
+		numbers = [item.text for item in ticker_rows_content[0]]
+		numbers = [item.replace('%','') if '%' in item else item for item in numbers]
 
-	elif answer in ('11', 'realestateetfs','realestate'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/real_estate',driver))
+		data = {}
+		x = 0
+		for index,row in enumerate(ticker_rows[0]):
+			onlyString = ''.join([item for item in row.text if not item.isdigit()])
 
-	elif answer in ('12', 'sectoretfs','sector'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/sectors',driver))
+			cleanOnlyString = onlyString.split("\n")[1:-1]
+			cleanOnlyString = [i.replace('%','') if '%' in i else i for i in cleanOnlyString]
+			cleanOnlyString = [i.replace('.','') if '.' in i else i for i in cleanOnlyString]
+			cleanOnlyString = [i.replace('-','') if '-' in i else i for i in cleanOnlyString]
 
-	elif answer in ('13', 'etfsstrategies','etfstrats'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/strategies',driver))
-
-	elif answer in ('14', 'smartbetaetfs','smartbeta'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/smart_beta',driver))
-
-	elif answer in ('15', 'themesubsectoretfs','theme'):
-		visualize_data(scrape_finviz('https://seekingalpha.com/etfs-and-funds/etf-tables/themes_and_subsectors',driver))
-	
-	else:
-		print("Invalid input, try again")
-		main()
-
-
-def data_select(data):
-	result = []
-
-	count = 0
-	rule = 3
-	for i in range(len(data)-1): 
-
-		count += 1
-		
-
-		if rule > 4:
-			rule = 4
-
-		if count == rule:
-			result.append(data[i-1])
-			result.append(data[i])
 			count = 0
-			rule +=1
 
-	return(result)
+			for i2,value in enumerate(cleanOnlyString):
+				count += 1
 
+				data[value] = numbers[x]
 
+				x += 1
 
-def scrape_finviz(url, wb):
-	search_url = url
-	driver = wb
+				if count== 6:
+					break
 
-	driver.get(search_url)
-	driver.minimize_window()
-	time.sleep(1)
-
-	etfs = driver.find_elements_by_class_name('data_lists_pages_cont_and_ads')
-	etfs_names = driver.find_elements_by_class_name('eft_or_etn')
-	
-	etfs_names = [x.text for x in etfs_names]
-
-	etfs_names_clean = [x for x in etfs_names if 'ETF or ETN' not in x]
-
-
-	etfs = etfs[0].text.replace("\n"," ")
-
-	clean = [i for i in etfs.split(' ') if '%' in i]
-
-	return_data = data_select([i.replace('%','') for i in clean])
-
-
-	d = {'ETF': etfs_names_clean, '1 Month': return_data[::2], '1 Year':return_data[1::2]}
-	ReturnsDf = pd.DataFrame(data=d)
-	ReturnsDf[['1 Month','1 Year']] = ReturnsDf[['1 Month','1 Year']].astype(float)
-	ReturnsDf['ETF'] = ReturnsDf['ETF'].astype('string')
-
-
-	return(ReturnsDf)
-
+		AllData[ticker] = [data['Perf Month'],data['Perf Year'],data['W Low'],data['W High'],data['Price']]
+	return (AllData)
 
 def visualize_data(df):
+
+	df = pd.DataFrame(df.T)
+
+	df = df.rename(columns={0:'1 Month Returns', 1:'1 Year Returns', 2:'52 Week Low',3:'52 Week High',4:'Price'})
+
+	df.loc[df['1 Year Returns'] == '-', ['1 Month Returns','1 Year Returns']] = np.nan
+
+
+	# df = df.drop(df[df['1 Year Returns'] == '-'].index)
+
+	df[['1 Month Returns','1 Year Returns','52 Week Low','52 Week High','Price']] = df[['1 Month Returns','1 Year Returns','52 Week Low','52 Week High','Price']].astype(float)
+
+	noNA_df = df[~np.isnan(df['1 Month Returns'])]
+	# print(noNA_df)
+
 	fig, ax = plt.subplots(figsize=(10,6))
-	ax.scatter(x = df['1 Year'], y = df['1 Month'])
-	# plt.xlim(min(ReturnsDf['1 Year']), max(ReturnsDf['1 Year']))
-	plt.ylim(min(df['1 Month']), max(df['1 Month']))
+	ax.scatter(x = df['52 Week Low'], y = df['52 Week High'])
+	# plt.ylim(min(df['52 Week High']), max(df['52 Week High']))
+	plt.ylim(min(df['52 Week High']), 0)
 
-	plt.xlabel('1 Year Returns (%)')
-	plt.ylabel('4 Week Returns (%)')
+	x_ticks = [0,100,150,300]
+	x_labels = ['1.0','2.0','2.5','4.0']
+	plt.xticks(x_ticks,x_labels)
 
-	for i, txt in enumerate(df['ETF']):
-		ax.annotate(txt, (df['1 Year'][i], df['1 Month'][i]))
+
+	ax.add_patch(Polygon([[min(df['52 Week Low']),min(df['52 Week High'])],[min(df['52 Week Low']),0],[112.5,min(df['52 Week High'])]], closed=True,fill=False))
+
+
+	plt.xlabel('Gain Factor 52 Week Low')
+	plt.ylabel('(%) from 52 Week High') # CIBR PSJ SOCL PNQI SKYY AIQ
+
+	for i, txt in enumerate(df.index):
+	    ax.annotate(txt, (df['52 Week Low'][i], df['52 Week High'][i]))
+
 
 	plt.show()
 
-	answer = str(input("Would you like to analyze leadership of other ETF data?: ")).lower()
-
-	while answer not in ('y','yes','n','no'):
-		answer = str(input("Would you like to analyze leadership of other ETF data?: ")).lower()
-	if answer in ('y','yes'):
-		main()
-	elif answer in ('n','no'):
-		exit()
 
 
 
-main()
+if __name__ == '__main__':
+	url = 'https://seekingalpha.com/etfs-and-funds/etf-tables/sectors'
+	response = requests.get(url)
+	doc = BeautifulSoup(response.text, 'html.parser')
+	sidebar = doc.find_all('div',{'class':'united_sidebar'})
+
+	sidebar_categories = []
+	paths = list()
+
+	for link in sidebar:
+	    sidebar_categories.append(link.text)
+	    page = link.find_all('a')
+	    for i in page:
+	        paths.append(i.get('href'))
+
+	sidebar_categories = sidebar_categories[0].split('\n')
+	sidebar_categories = sidebar_categories[2:-2]
+
+	mainMenu = list(zip(sidebar_categories, paths))
+
+	for index, value in enumerate(mainMenu):
+	    print(f"{index}: {value[0]}")
+
+	numberSelect = int(input("Select ETF performance data you would like to see the leadership of: "))
+
+	while numberSelect not in range(len(mainMenu)):
+	    numberSelect = int(input("Select ETF performance data you would like to see the leadership of: "))
+
+	if numberSelect in range(len(mainMenu)):
+	    dataSelected, pathSelected = mainMenu[numberSelect][0], mainMenu[numberSelect][1]
+	    
+	    print("Selected the following data:",dataSelected)
+
+	urlSelected = 'https://seekingalpha.com'+pathSelected
+
+	symbols = get_symbols(urlSelected)
+	visualize_data(scrape_data(symbols))
