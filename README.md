@@ -5,7 +5,7 @@ DESCRIPTION:
 A tool that lets the user check the momentum leadership of sector ETFs in real-time. 
 The performance data is first retrieved from various sites.
 Then, the program proceeds to fetch the data that is deemed useful into a Pandas DataFrame. 
-Finally, using the MatplotLib library, a performance graph is displayed, where the x-axis represents the asset's gain factor with respect to its 52-Week Low wille y-axis represents the asset's performance relative to its 52-Week High.
+Finally, using the MatplotLib library, a performance graph is displayed, where the x-axis represents the asset's gain factor with respect to its 52-Week Low while the y-axis represents the asset's performance relative to its 52-Week High.
 
 HOW TO INTERPRET:
 
